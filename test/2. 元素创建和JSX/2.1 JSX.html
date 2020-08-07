@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2.1 JSX</title>
+  </head>
+  <body>
+    <script>
+      //   const element = (
+      //     <div id="container">
+      //       <input value="foo" type="text" />
+      //       <a href="/bar">bar</a>
+      //       <span onClick={(e) => alert("Hi")}>click me</span>
+      //     </div>
+      //   )
+      const element = {
+        type: "div",
+        props: {
+          id: "container",
+          children: [
+            { type: "input", props: { value: "foo", type: "text" } },
+            {
+              type: "a",
+              props: {
+                href: "/bar",
+                children: [
+                  { type: "TEXT ELEMENT", props: { nodeValue: "bar" } },
+                ],
+              },
+            },
+            {
+              type: "span",
+              props: {
+                onClick: (e) => alert("Hi"),
+                children: [
+                  { type: "TEXT ELEMENT", props: { nodeValue: "click me" } },
+                ],
+              },
+            },
+          ],
+        },
+      }
+
+      const TEXT_ELEMENT = "TEXT_ELEMENT"
+
+      function createElement(type, config, ...args) {
+        const props = Object.assign({}, config)
+        const hasChildren = args.length > 0
+        const rawChildren = hasChildren ? [].concat(...args) : []
+        props.children = rawChildren
+          .filter((c) => c != null && c !== false)
+          .map((c) => (c instanceof Object ? c : createTextElement(c)))
+        return { type, props }
+      }
+
+      function createTextElement(value) {
+        return createElement(TEXT_ELEMENT, { nodeValue: value })
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>4. 组件和状态</title>
+  </head>
+  <body>
+    <script>
+      // 运行开始
+      let rootInstance = null
+
+      function render(element, container) {
+        const prevInstance = rootInstance
+        const nextInstance = reconcile(container, prevInstance, element)
+        rootInstance = nextInstance
+      }
+
+      function reconcile(parentDom, instance, element) {
+        if (instance == null) {
+          const newInstance = instantiate(element)
+          parentDom.appendChild(newInstance.dom)
+          return newInstance
+        } else if (element == null) {
+          // remove instance
+          parentDom.removeChild(instance.dom)
+          return null
+        } else if (instance.element.type !== element.type) {
+          const newInstance = instantiate(element)
+          parentDom.replaceChild(newInstance.dom, instance.dom)
+          return newInstance
+        } else if (typeof element.type === "string") {
+          // 更新 instance
+          updateDomProperties(
+            instance.dom,
+            instance.element.props,
+            element.props
+          )
+          // 替换新的 children
+          instance.childInstances = reconcileChildren(instance, element)
+          // 替换element
+          instance.element = element
+          return instance
+        } else {
+          //Update composite instance
+          // 更新-组件-
+          // parentDom 真实-html-树
+          // element Didact元素 新
+          // instance  旧
+
+          instance.publicInstance.props = element.props // 更新props
+          const childElement = instance.publicInstance.render() // 组件的渲染函数
+          const oldChildInstance = instance.childInstance
+          const childInstance = reconcile(
+            parentDom,
+            oldChildInstance,
+            childElement
+          )
+          instance.dom = childInstance.dom
+          instance.childInstance = childInstance
+          instance.element = element
+          return instance
+        }
+      }
+
+      function reconcileChildren(instance, element) {
+        const dom = instance.dom
+        const childInstances = instance.childInstances
+        const nextChildElements = element.props.children || []
+        const nextChildrenInstances = []
+
+        const count = Math.max(childInstances.length, nextChildElements.length)
+
+        for (let i = 0; i < count; i++) {
+          const childInstance = childInstances[i]
+          const childElement = childElements[i]
+          const newChildInstance = reconcile(dom, childInstance, childElement)
+          nextChildrenInstances.push(newChildInstance)
+        }
+
+        return nextChildrenInstances.filter((instance) => instance != null)
+      }
+
+      function instantiate(element) {
+        const { type, props } = element
+
+        const isDomElement = typeof type === "string"
+
+        if (isDomElement) {
+          const isTextElement = type === "TEXT ELEMENT"
+
+          const dom = isTextElement
+            ? document.createTextNode("")
+            : document.createElement(type)
+
+          // 更新属性和方法
+
+          updateDomProperties(dom, [], props)
+
+          // instantiate children and append children
+          const childElements = props.children || []
+          const childInstances = childElements.map(instantiate)
+          const childDoms = childInstances.map(
+            (childInstance) => childInstance.dom
+          )
+          childDoms.forEach((child) => dom.appendChild(child))
+
+          const instance = { dom, element, childInstances }
+          return instance
+        } else {
+          // 初始化组件<app/>
+          const instance = {}
+          // createPublicInstance
+          // 1. 新建 newApp = new App()
+          // 2. newApp.__internalInstance = instance
+          // 3. publicInstance = newApp
+
+          const publicInstance = createPublicInstance(element, instance)
+          const childElement = publicInstance.render() // 自定义的渲染函数
+
+          const childInstance = instantiate(childElement) // 递归 孩子拿到 { dom, element, childInstances }
+          const dom = childInstance.dom // >> 组件元素比Didact元素 多了本身- 实例
+          Object.assign(instance, {
+            dom,
+            element,
+            childInstance,
+            publicInstance,
+          })
+          return instance
+        }
+      }
+
+      function updateDomProperties(dom, prevProps, nextProps) {
+        const isListener = (name) => name.startWith("on")
+        const isAttribute = (name) => !isListener(name) && name !== "children"
+
+        // remove prev event listener
+        Object.keys(prevProps)
+          .filter(isListener)
+          .forEach((name) => {
+            const eventType = name.toLowerCase().substring(2)
+            dom.addEventListener(eventType, prevProps[name])
+          })
+
+        // remove prev attribute
+        Object.keys(prevProps)
+          .filter(isAttribute)
+          .forEach((name) => {
+            dom.setAttribute(name, prevProps[name])
+          })
+
+        // add event listener
+        Object.keys(props)
+          .filter(isListener)
+          .forEach((name) => {
+            const eventType = name.toLowerCase().substring(2)
+            dom.addEventListener(eventType, props[name])
+          })
+
+        // add attribute
+        Object.keys(props)
+          .filter(isAttribute)
+          .forEach((name) => {
+            dom.setAttribute(name, props[name])
+          })
+      }
+
+      function createPublicInstance(element, internalInstance) {
+        // 当元素景来这里来, 说明type是一个函数
+        const { type, props } = element
+        const publicInstance = new type(props)
+        publicInstance.__internalInstance = internalInstance
+        return publicInstance
+      }
+
+      class Component {
+        constructor(props) {
+          this.props = props
+          this.state = this.state || {}
+        }
+
+        setState(partialState) {
+          this.state = Object.assign({}, this.state, partialState)
+          // 内部实例的引用
+          updateInstance(this.__internalInstance)
+        }
+      }
+
+      function updateInstance(internalInstance) {
+        const parentDom = internalInstance.dom.parentNode
+        const element = internalInstance.element
+        reconcile(parentDom, internalInstance, element)
+      }
+    </script>
+  </body>
+</html>

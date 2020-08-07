@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3.1 虚拟DOM和对比</title>
+  </head>
+  <body>
+    <script>
+      // 运行开始
+      let rootInstance = null
+
+      function render(element, container) {
+        const prevInstance = rootInstance
+        const nextInstance = reconcile(container, prevInstance, element)
+        rootInstance = nextInstance
+      }
+
+      function reconcile(parentDom, instance, element) {
+        if (instance == null) {
+          const newInstance = instantiate(element)
+          parentDom.appendChild(newInstance.dom)
+          return newInstance
+        } else if (element == null) {
+          // remove instance
+          parentDom.removeChild(instance.dom)
+          return null
+        } else if (instance.element.type === element.type) {
+          // 更新 instance
+          updateDomProperties(
+            instance.dom,
+            instance.element.props,
+            element.props
+          )
+          // 替换新的 children
+          instance.childInstances = reconcileChildren(instance, element)
+          // 替换element
+          instance.element = element
+          return instance
+        } else {
+          const newInstance = instantiate(element)
+          parentDom.replaceChild(newInstance.dom, instance.dom)
+          return newInstance
+        }
+      }
+
+      function reconcileChildren(instance, element) {
+        const dom = instance.dom
+        const childInstances = instance.childInstances
+        const nextChildElements = element.props.children || []
+        const nextChildrenInstances = []
+
+        const count = Math.max(childInstances.length, nextChildElements.length)
+
+        for (let i = 0; i < count; i++) {
+          const childInstance = childInstances[i]
+          const childElement = childElements[i]
+          const newChildInstance = reconcile(dom, childInstance, childElement)
+          nextChildrenInstances.push(newChildInstance)
+        }
+
+        return nextChildrenInstances.filter((instance) => instance != null)
+      }
+
+      function instantiate(element) {
+        const { type, props } = element
+
+        const isTextElement = type === "TEXT ELEMENT"
+
+        const dom = isTextElement
+          ? document.createTextNode("")
+          : document.createElement(type)
+
+        // 更新属性和方法
+
+        updateDomProperties(dom, [], props)
+
+        // instantiate children and append children
+        const childElements = props.children || []
+        const childInstances = childElements.map(instantiate)
+        const childDoms = childInstances.map(
+          (childInstance) => childInstance.dom
+        )
+        childDoms.forEach((child) => dom.appendChild(child))
+
+        const instance = { dom, element, childInstances }
+        return instance
+      }
+
+      function updateDomProperties(dom, prevProps, nextProps) {
+        const isListener = (name) => name.startWith("on")
+        const isAttribute = (name) => !isListener(name) && name !== "children"
+
+        // remove prev event listener
+        Object.keys(prevProps)
+          .filter(isListener)
+          .forEach((name) => {
+            const eventType = name.toLowerCase().substring(2)
+            dom.addEventListener(eventType, prevProps[name])
+          })
+
+        // remove prev attribute
+        Object.keys(prevProps)
+          .filter(isAttribute)
+          .forEach((name) => {
+            dom.setAttribute(name, prevProps[name])
+          })
+
+        // add event listener
+        Object.keys(props)
+          .filter(isListener)
+          .forEach((name) => {
+            const eventType = name.toLowerCase().substring(2)
+            dom.addEventListener(eventType, props[name])
+          })
+
+        // add attribute
+        Object.keys(props)
+          .filter(isAttribute)
+          .forEach((name) => {
+            dom.setAttribute(name, props[name])
+          })
+      }
+    </script>
+  </body>
+</html>

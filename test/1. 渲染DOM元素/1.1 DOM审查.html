@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>1.1 DOM审查</title>
+    <style>
+      .my-class {
+        border: 1px solid red;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      const domRoot = document.getElementById("root")
+
+      // create input
+      const domInput = document.createElement("input")
+      domInput.type = "text"
+      domInput.value = "hello world"
+      domInput.className = "my-class"
+      domInput.addEventListener("change", (e) => console.log(e.target.value))
+
+      // create text node
+      const domText = document.createTextNode("")
+      domText.nodeValue = "foo"
+
+      // append
+      domRoot.appendChild(domInput)
+      domRoot.appendChild(domText)
+    </script>
+  </body>
+</html>

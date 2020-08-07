@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>1.4 渲染DOM文本节点</title>
+  </head>
+  <body>
+    <script>
+      function render(element, parentDom) {
+        const { type, props } = element
+
+        // 创建 DOM
+        const isTextElement = type === "TEXT ELEMENT"
+        const dom = isTextElement
+          ? document.createTextNode("")
+          : document.createElement(type)
+
+        const isListener = (name) => name.startWith("on")
+
+        // 监听事件
+        Object.keys(props)
+          .filter(isListener)
+          .forEach((name) => {
+            const eventType = name.toLowerCase().substring(2) // 取后两位
+            dom.addEventListener(eventType, props[name])
+          })
+
+        const isAttribute = (name) => name !== "children" && !isListener(name)
+
+        // 添加属性
+        Object.keys(props)
+          .filter(isAttribute)
+          .forEach((name) => {
+            dom[name] = props[name]
+          })
+
+        const childElements = props.children || []
+        childElements.forEach((childElement) => render(childElement, dom))
+
+        dom.appendChild(dom)
+      }
+    </script>
+  </body>
+</html>
